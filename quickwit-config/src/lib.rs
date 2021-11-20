@@ -20,5 +20,5 @@
 mod index_config;
 mod server_config;
 
-pub use index_config::IndexConfig;
+pub use index_config::{DocMapping, IndexConfig, IndexingSettings, SearchSettings, SourceConfig};
 pub use server_config::ServerConfig;

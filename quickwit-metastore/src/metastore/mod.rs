@@ -26,7 +26,9 @@ use std::ops::Range;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use quickwit_index_config::IndexConfig;
+use chrono::Utc;
+use quickwit_config::{DocMapping, IndexingSettings, SearchSettings, SourceConfig};
+use quickwit_index_config::IndexConfig as LegacyIndexConfig;
 use serde::{Deserialize, Serialize};
 
 use crate::checkpoint::{Checkpoint, CheckpointDelta};
@@ -34,17 +36,96 @@ use crate::{MetastoreResult, SplitMetadataAndFooterOffsets, SplitState};
 
 /// An index metadata carries all meta data about an index.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(into = "VersionedIndexMetadata")]
 pub struct IndexMetadata {
-    /// Index ID. The index ID identifies the index when querying the metastore.
     pub index_id: String,
-    /// Index URI. The index URI defines the location of the storage that contains the
-    /// split files.
     pub index_uri: String,
-    /// The config used for this index.
-    pub index_config: Arc<dyn IndexConfig>,
-    /// Checkpoint relative to a source. It express up to where documents have been indexed.
+    pub checkpoint: Checkpoint,
+    pub doc_mapping: DocMapping,
+    pub indexing_settings: IndexingSettings,
+    pub search_settings: SearchSettings,
+    pub sources: Vec<SourceConfig>,
+    pub create_timestamp: i64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub(crate) struct IndexMetadataV0 {
+    pub index_id: String,
+    pub index_uri: String,
+    pub index_config: Arc<dyn LegacyIndexConfig>,
     pub checkpoint: Checkpoint,
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub(crate) struct IndexMetadataV1 {
+    pub index_id: String,
+    pub index_uri: String,
+    pub checkpoint: Checkpoint,
+    pub doc_mapping: DocMapping,
+    pub indexing_settings: IndexingSettings,
+    pub search_settings: SearchSettings,
+    pub sources: Vec<SourceConfig>,
+    pub create_timestamp: i64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(tag = "version")]
+pub(crate) enum VersionedIndexMetadata {
+    #[serde(rename = "1")]
+    V1(IndexMetadataV1),
+    #[serde(rename = "0")]
+    V0(IndexMetadataV0),
+}
+
+impl From<IndexMetadata> for VersionedIndexMetadata {
+    fn from(index_metadata: IndexMetadata) -> Self {
+        VersionedIndexMetadata::V1(index_metadata.into())
+    }
+}
+
+impl From<IndexMetadata> for IndexMetadataV1 {
+    fn from(index_metadata: IndexMetadata) -> Self {
+        Self {
+            index_id: index_metadata.index_id,
+            index_uri: index_metadata.index_uri,
+            checkpoint: index_metadata.checkpoint,
+            doc_mapping: index_metadata.doc_mapping,
+            indexing_settings: index_metadata.indexing_settings,
+            search_settings: index_metadata.search_settings,
+            sources: index_metadata.sources,
+            create_timestamp: index_metadata.create_timestamp,
+        }
+    }
+}
+
+impl From<VersionedIndexMetadata> for IndexMetadata {
+    fn from(index_metadata: VersionedIndexMetadata) -> Self {
+        match index_metadata {
+            VersionedIndexMetadata::V0(v0_index_metadata) => Self {
+                index_id: v0_index_metadata.index_id,
+                index_uri: v0_index_metadata.index_uri,
+                checkpoint: v0_index_metadata.checkpoint,
+                doc_mapping: v0_index_metadata.index_config.into(),
+                indexing_settings: IndexingSettings::default(), // FIXME
+                search_settings: SearchSettings::default(),     // FIXME
+                sources: Vec::new(),
+                create_timestamp: Utc::now().timestamp(),
+            },
+            VersionedIndexMetadata::V1(v1_index_metadata) => Self {
+                index_id: v1_index_metadata.index_id,
+                index_uri: v1_index_metadata.index_uri,
+                checkpoint: v1_index_metadata.checkpoint,
+                doc_mapping: v1_index_metadata.doc_mapping,
+                indexing_settings: v1_index_metadata.indexing_settings,
+                search_settings: v1_index_metadata.search_settings,
+                sources: v1_index_metadata.sources,
+                create_timestamp: v1_index_metadata.create_timestamp,
+            },
+        }
+    }
+}
+
+// TODO: Implement custom deserializer for missing version field.
 
 /// Metastore meant to manage Quickwit's indexes and their splits.
 ///

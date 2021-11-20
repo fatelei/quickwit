@@ -2396,6 +2396,7 @@ dependencies = [
  "futures",
  "mockall 0.9.1",
  "openssl",
+ "quickwit-config",
  "quickwit-index-config",
  "quickwit-storage",
  "rand 0.8.4",

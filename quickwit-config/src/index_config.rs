@@ -19,26 +19,38 @@
 
 use std::ffi::OsStr;
 use std::path::Path;
+use std::sync::Arc;
 
 use anyhow::{bail, Context};
 use byte_unit::Byte;
-use quickwit_index_config::FieldMappingEntry;
+use quickwit_index_config::{FieldMappingEntry, IndexConfig as LegacyIndexConfig};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DocMapping {
     pub field_mappings: Vec<FieldMappingEntry>,
     pub tag_fields: Vec<String>,
     pub store_source: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+impl From<Arc<dyn LegacyIndexConfig>> for DocMapping {
+    fn from(legacy_index_config: Arc<dyn LegacyIndexConfig>) -> Self {
+        // FIXME
+        DocMapping {
+            field_mappings: Vec::new(),
+            tag_fields: Vec::new(),
+            store_source: false,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct IndexingResources {
     pub num_threads: usize,
     pub heap_size: Byte,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct MergePolicy {
     pub demux_factor: usize,
     pub merge_factor: usize,
@@ -46,7 +58,7 @@ pub struct MergePolicy {
     pub min_level_num_docs: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct IndexingSettings {
     pub demux_field: String,
     pub timestamp_field: String,
@@ -57,19 +69,33 @@ pub struct IndexingSettings {
     pub resources: IndexingResources,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+// TODO remove
+impl Default for IndexingSettings {
+    fn default() -> Self {
+        unimplemented!()
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct SearchSettings {
     pub default_search_fields: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+// TODO remove
+impl Default for SearchSettings {
+    fn default() -> Self {
+        unimplemented!()
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SourceConfig {
     pub source_id: String,
     pub source_type: String,
     pub params: toml::Value,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct IndexConfig {
     pub index_id: String,
     pub index_uri: String,
