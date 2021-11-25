@@ -17,23 +17,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use quickwit_metastore::{SplitMetadata, SplitMetadataAndFooterOffsets, SplitState};
+use quickwit_metastore::SplitMetadata;
 
 /// Creates a split metadata object that will be
 /// used to check for non-regression
-fn sample_split_metadata_for_regression() -> SplitMetadataAndFooterOffsets {
-    SplitMetadataAndFooterOffsets {
-        split_metadata: SplitMetadata {
-            split_id: "split".to_string(),
-            num_docs: 12303,
-            size_in_bytes: 234234,
-            time_range: Some(121000..=130198),
-            split_state: SplitState::Published,
-            create_timestamp: 3,
-            update_timestamp: 1,
-            tags: ["234".to_string(), "aaa".to_string()].into_iter().collect(),
-            demux_num_ops: 1,
-        },
+fn sample_split_metadata_for_regression() -> SplitMetadata {
+    SplitMetadata {
+        split_id: "split".to_string(),
+        num_docs: 12303,
+        original_size_in_bytes: 234234,
+        time_range: Some(121000..=130198),
+        create_timestamp: 3,
+        tags: ["234".to_string(), "aaa".to_string()].into_iter().collect(),
+        demux_num_ops: 1,
         footer_offsets: 1000..2000,
     }
 }

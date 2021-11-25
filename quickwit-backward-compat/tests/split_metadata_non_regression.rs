@@ -20,11 +20,11 @@
 use std::fs;
 use std::path::Path;
 
-use quickwit_metastore::SplitMetadataAndFooterOffsets;
+use quickwit_metastore::SplitMetadata;
 
-fn read_split_metadata(path: &Path) -> anyhow::Result<SplitMetadataAndFooterOffsets> {
+fn read_split_metadata(path: &Path) -> anyhow::Result<SplitMetadata> {
     let split_metadata_bytes = std::fs::read(path)?;
-    let split: SplitMetadataAndFooterOffsets = serde_json::from_slice(&split_metadata_bytes)?;
+    let split: SplitMetadata = serde_json::from_slice(&split_metadata_bytes)?;
     Ok(split)
 }
 
